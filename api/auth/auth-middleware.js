@@ -18,17 +18,19 @@ const restricted = async (req, res, next) => {
 
     Put the decoded token in the req object, to make life easier for middlewares downstream!
   */
-    if(req.headers.authorization == null){
-      next({status:401,message:'Token required'})
-      return
-    }
-    try{
-      req.decodedJWT = await jwt.verify(req.headers.authorization,JWT_SECRET)
-    }catch(err){
-      next({status:401,message:'Token invalid'})
-      return
-    }
+   const token = req.headers.authorization
+   if(!token){
+     next({status:401,message:'Token required'})
+     return
+   }
+   try{
+    req.decodedJWT = await jwt.verify(token,JWT_SECRET)
     next()
+    return
+   }
+   catch(err){
+    next({status:401,message:'Token invalid'})
+   }
 }
 
 const only = role_name => (req, res, next) => {
@@ -42,7 +44,7 @@ const only = role_name => (req, res, next) => {
 
     Pull the decoded token from the req object, to avoid verifying it again!
   */
-    if(req.decodedJWT.role_name != role_name){
+    if(req.decodedJWT.role_name !== role_name){
       next({status:403,message:'This is not for you'})
       return
     } 
@@ -59,7 +61,7 @@ const checkUsernameExists = async(req, res, next) => {
     }
   */
     try{
-      const user = await Users.findBy({username:req.body.username})
+      const [user] = await Users.findBy({username:req.body.username})
       if(!user){
         next({status:401,message:'Invalid credentials'})
         return
@@ -93,7 +95,7 @@ const validateRoleName = (req, res, next) => {
   */
  let {role_name} = req.body
  if(!role_name || !role_name.trim()){
-   role_name = 'student'
+   req.role_name = 'student'
    next()
    return
  }
